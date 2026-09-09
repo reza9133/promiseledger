@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import { useWallet } from "../hooks/useWallet";
-import { shortAddr } from "../lib/format";
-import { CONTRACT_EXPLORER_URL, STUDIO_URL } from "../lib/chain";
+import { WalletMenu } from "./WalletMenu";
+import { CONTRACT_EXPLORER_URL } from "../lib/chain";
 
 export function Header() {
-  const { status, address, chainOk, connect, switchNetwork, error } = useWallet();
+  const { status, chainOk, connect, error } = useWallet();
 
   return (
     <header className="site-header">
@@ -35,27 +35,10 @@ export function Header() {
             GenLayer Studio
           </a>
 
-          {status === "connected" && address ? (
-            <>
-              <a className="fund-link" href={STUDIO_URL} target="_blank" rel="noreferrer">
-                Fund on Studio ↗
-              </a>
-              {chainOk === false ? (
-                <button className="wallet-chip wallet-chip-warn" onClick={() => void switchNetwork()}>
-                  Wrong network — switch
-                </button>
-              ) : (
-                <span className="wallet-chip" title={address}>
-                  {shortAddr(address)}
-                </span>
-              )}
-            </>
+          {status === "connected" ? (
+            <WalletMenu />
           ) : (
-            <button
-              className="btn btn-primary"
-              onClick={connect}
-              disabled={status === "connecting"}
-            >
+            <button className="btn btn-primary" onClick={connect} disabled={status === "connecting"}>
               {status === "connecting" ? "Connecting…" : "Connect wallet"}
             </button>
           )}
@@ -65,8 +48,8 @@ export function Header() {
       {status === "connected" && chainOk === false && (
         <div className="header-notice header-notice-warn">
           Your wallet is connected but pointed at a different network, so filing, verifying, or disputing
-          will fail. Click "Wrong network — switch" above (or switch it by hand to chain id{" "}
-          <strong>61999</strong>, RPC <code>https://studio.genlayer.com/api</code>).
+          will fail. Open the wallet menu above and switch (or by hand: chain id <strong>61999</strong>,
+          RPC <code>https://studio.genlayer.com/api</code>).
         </div>
       )}
     </header>

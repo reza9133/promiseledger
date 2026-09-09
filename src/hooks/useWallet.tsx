@@ -15,9 +15,46 @@ interface WalletState {
   /** Re-attempts the add/switch flow, then re-checks. Call this from a
    * "wrong network" banner or button. */
   switchNetwork: () => Promise<void>;
+  /** Clears this app's own connected state, and best-effort revokes the
+   * wallet's permission on extensions that support it (most don't — see
+   * the comment above the implementation). */
+  disconnect: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
+
+// MetaMask (and most injected wallets) don't have a "log out" concept the
+// way a session cookie does — the permission grant lives in the extension
+// itself and persists across reloads regardless of what this app does.
+// `wallet_revokePermissions` exists on newer wallet versions and we try it,
+// but the reliable part of "disconnect" is local: forget our own state, and
+// remember that the user asked to disconnect so the auto-reconnect-on-load
+// effect below doesn't immediately undo it.
+const DISCONNECTED_KEY = "promiseledger:wallet-disconnected";
+
+function markDisconnected() {
+  try {
+    localStorage.setItem(DISCONNECTED_KEY, "1");
+  } catch {
+    // ignore — worst case, auto-reconnect fires next load
+  }
+}
+
+function clearDisconnectedMark() {
+  try {
+    localStorage.removeItem(DISCONNECTED_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function wasManuallyDisconnected(): boolean {
+  try {
+    return localStorage.getItem(DISCONNECTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<WalletStatus>("idle");
@@ -32,6 +69,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const setupFor = useCallback(
     async (addr: `0x${string}`) => {
+      clearDisconnectedMark();
       const client = makeWriteClient(addr);
       clientRef.current = client;
       setAddress(addr);
@@ -66,12 +104,34 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await recheckChain();
   }, [recheckChain]);
 
+  const disconnect = useCallback(async () => {
+    const eth = typeof window !== "undefined" ? window.ethereum : undefined;
+    try {
+      // Supported on newer MetaMask; silently ignored elsewhere.
+      await eth?.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    } catch {
+      // Not supported, or the user dismissed the revoke prompt — the local
+      // state below still gets cleared, which is what actually matters for
+      // this app.
+    }
+    markDisconnected();
+    clientRef.current = null;
+    setAddress(null);
+    setStatus("idle");
+    setChainOk(null);
+    setError(null);
+  }, []);
+
   useEffect(() => {
     const eth = typeof window !== "undefined" ? window.ethereum : undefined;
     if (!eth?.on) return;
     const onAccounts = (accounts: string[]) => {
       if (accounts?.[0]) void setupFor(accounts[0] as `0x${string}`);
       else {
+        markDisconnected();
         setAddress(null);
         setStatus("idle");
         setChainOk(null);
@@ -89,10 +149,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [setupFor, recheckChain]);
 
-  // Reconnect silently if the site already has permission from a previous visit.
+  // Reconnect silently if the site already has permission from a previous
+  // visit — unless the user explicitly disconnected last time.
   useEffect(() => {
     const eth = typeof window !== "undefined" ? window.ethereum : undefined;
-    if (!eth) return;
+    if (!eth || wasManuallyDisconnected()) return;
     eth
       .request({ method: "eth_accounts" })
       .then((accounts: string[]) => {
@@ -103,8 +164,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<WalletState>(
-    () => ({ status, address, client: clientRef.current, error, chainOk, connect, switchNetwork }),
-    [status, address, error, chainOk, connect, switchNetwork],
+    () => ({ status, address, client: clientRef.current, error, chainOk, connect, switchNetwork, disconnect }),
+    [status, address, error, chainOk, connect, switchNetwork, disconnect],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

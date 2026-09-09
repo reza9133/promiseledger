@@ -160,19 +160,16 @@ button {
   box-shadow: 0 0 0 3px rgba(47, 110, 78, 0.25);
 }
 
-.fund-link {
-  font-size: 12.5px;
-  color: var(--desk-text-dim);
-  text-decoration: none;
-  white-space: nowrap;
-  border-bottom: 1px dotted currentColor;
-}
-
-.fund-link:hover {
-  color: var(--desk-text);
+.wallet-menu {
+  position: relative;
 }
 
 .wallet-chip {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 13px;
   background: var(--desk-raised);
@@ -180,11 +177,19 @@ button {
   border-radius: var(--radius-pill);
   padding: 8px 14px;
   color: var(--desk-text);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wallet-chip:hover {
+  border-color: var(--v-pending);
+}
+
+.wallet-chip-caret {
+  font-size: 10px;
+  color: var(--desk-text-dim);
 }
 
 .wallet-chip-warn {
-  appearance: none;
-  cursor: pointer;
   font-family: var(--font-body);
   font-weight: 500;
   background: rgba(163, 57, 44, 0.16);
@@ -194,6 +199,64 @@ button {
 
 .wallet-chip-warn:hover {
   background: rgba(163, 57, 44, 0.26);
+  border-color: var(--v-broken);
+}
+
+.wallet-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 232px;
+  background: var(--desk-raised);
+  border: 1px solid var(--desk-line);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wallet-dropdown-address {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--desk-text-dim);
+  padding: 8px 10px 6px;
+  word-break: break-all;
+  border-bottom: 1px solid var(--desk-line);
+  margin-bottom: 4px;
+}
+
+.wallet-dropdown-item {
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--desk-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.wallet-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wallet-dropdown-warn {
+  color: #f0b3a8;
+}
+
+.wallet-dropdown-danger {
+  color: #f0b3a8;
+  border-top: 1px solid var(--desk-line);
+  margin-top: 2px;
+  padding-top: 9px;
 }
 
 .header-notice-warn {

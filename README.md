@@ -2,7 +2,7 @@
 
 A frontend for the `PromiseLedger` Intelligent Contract deployed at
 [`0x5FA7e3fA2ddE37F3cA7b61E1C89D9396a57E264e`](https://explorer-studio.genlayer.com/contracts/0x5FA7e3fA2ddE37F3cA7b61E1C89D9396a57E264e)
-on **GenLayer Studionet** (the hosted Studio environment).
+on **GenLayer Studionet**.
 
 It lets anyone:
 

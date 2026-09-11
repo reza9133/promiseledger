@@ -103,13 +103,32 @@ npm run preview # serve the production build locally
 
 ## Deploy to Cloudflare Pages
 
+Deployment is automated by `.github/workflows/deploy.yml`: every push to
+`main` builds the app and publishes it to Cloudflare Pages via
+`cloudflare/pages-action`, so each run leaves a record — with the live
+URL and build log — under this repo's **Actions** tab. That run history
+is the repository-backed evidence that publication actually happened,
+rather than a URL only claimed outside the repo.
+
+To enable it, set these in the repo's **Settings → Secrets and variables →
+Actions**:
+
+| Name | Type | Value |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | Secret | A Cloudflare token with "Cloudflare Pages — Edit" permission |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret | Your Cloudflare account ID |
+| `VITE_CONTRACT_ADDRESS` | Variable (optional) | Only if pointing at your own contract deployment |
+
+The Cloudflare Pages project name is pinned to `promiseledger` in both
+`wrangler.toml` and the workflow, so it always deploys to the same
+project/URL instead of creating a new one each time.
+
+### Manual deploy (equivalent settings, if not using the Action)
+
 - **Build command:** `npm run build`
 - **Build output directory:** `dist`
 - **Root directory:** leave empty if this folder is the repo root; otherwise
   point it at wherever you placed this project.
-- **Environment variables:** none required. Only add `VITE_CONTRACT_ADDRESS`
-  if you're pointing at your own deployment of the contract instead of the
-  one baked into `src/lib/chain.ts`.
 - **Node version:** set the `NODE_VERSION` environment variable to `20` (or
   add a `.nvmrc` with `20`) if Cloudflare's default Node is older — this
   project needs Node 18+.

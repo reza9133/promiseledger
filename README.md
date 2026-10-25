@@ -19,7 +19,7 @@ Deploy your own v2 contract and point the app at it:
 
 ```bash
 npm run deploy                         # prints the address (uses a funded throw-away key)
-echo "VITE_CONTRACT_ADDRESS=0x..." > .env
+echo "VITE_CONTRACT_ADDRESS=0x..." > .env   # optional: the app already points at the v2 deployment 0x139A49E5fa487483D09F3bF6F1d029E2eE6a9B43
 ```
 
 Studionet has no external faucet: fund the wallet you connect from [studio.genlayer.com](https://studio.genlayer.com) (account selector, 💧 button).

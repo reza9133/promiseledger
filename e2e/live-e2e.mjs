@@ -23,6 +23,7 @@
  *   MODEL depends on what real LLM validators decide, or on how the web
  *         renderer presents a page. The observation is recorded; it only fails the run with --strict.
  */
+import "./throttle.mjs"; // must stay first: wraps fetch before genlayer-js / viem load
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { keccak256, toHex } from "viem";
@@ -148,7 +149,7 @@ async function expectRevert(client, fn, a, needle, { control, onchain = false } 
   const totalBefore = await total();
   const hash = await client.writeContract({ address, functionName: fn, args: a, value: 0n });
   const t0 = Date.now();
-  const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 3000, retries: 200 });
+  const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 5000, retries: 200 });
   txs.push({ label: `expected rejection: ${fn}`, hash, explorer: `${EXPLORER}/tx/${hash}`, seconds: Math.round((Date.now() - t0) / 1000), failed: receiptFailed(receipt) });
   const reason = taggedMessage(receipt);
   if (reason) expect(wants(reason), `rejected on-chain, but with "${reason.slice(0, 200)}" instead of one containing "${needle}"`);
@@ -159,7 +160,7 @@ async function expectRevert(client, fn, a, needle, { control, onchain = false } 
 async function write(client, fn, a, label) {
   const hash = await client.writeContract({ address, functionName: fn, args: a, value: 0n });
   const t0 = Date.now();
-  const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 3000, retries: 200 });
+  const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 5000, retries: 200 });
   txs.push({ label: label ?? fn, hash, explorer: `${EXPLORER}/tx/${hash}`, seconds: Math.round((Date.now() - t0) / 1000), failed: receiptFailed(receipt) });
   if (receiptFailed(receipt)) throw new Error(`${fn} failed on-chain: ${taggedMessage(receipt) ?? "see explorer"}`);
   return { hash, receipt };

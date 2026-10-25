@@ -1,0 +1,388 @@
+{
+  "overall": "PASS",
+  "runId": "mvnx513n",
+  "address": "0x139A49E5fa487483D09F3bF6F1d029E2eE6a9B43",
+  "steps": [
+    {
+      "id": "S01",
+      "title": "Accounts created and funded",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "alice 0x802dc259d5Bc32636f532065fB3EB647117B5bb3, bob 0x7eC24E5A5c87BC30A3B4e55e3A9fd2EB40Aff9E8",
+      "ms": 804
+    },
+    {
+      "id": "S02",
+      "title": "Evidence fixtures are reachable and match the local files",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "base https://raw.githubusercontent.com/reza9133/promiseledger/main/e2e/fixtures",
+      "ms": 689
+    },
+    {
+      "id": "S03",
+      "title": "Contract deployed (or existing v2 reused)",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "reusing 0x139A49E5fa487483D09F3bF6F1d029E2eE6a9B43",
+      "ms": 1
+    },
+    {
+      "id": "S04",
+      "title": "get_version is 2.x and get_limits matches the source constants",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "version 2.0.0",
+      "ms": 2264
+    },
+    {
+      "id": "R01",
+      "title": "Rejected: private IPv4 literal",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 3591
+    },
+    {
+      "id": "R02",
+      "title": "Rejected: cloud metadata address",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1141
+    },
+    {
+      "id": "R03",
+      "title": "Rejected: CGNAT range",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1148
+    },
+    {
+      "id": "R04",
+      "title": "Rejected: 172.16/12 range",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1149
+    },
+    {
+      "id": "R05",
+      "title": "Rejected: hex-encoded loopback",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1125
+    },
+    {
+      "id": "R06",
+      "title": "Rejected: non-443 port",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1174
+    },
+    {
+      "id": "R07",
+      "title": "Rejected: userinfo in URL",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1216
+    },
+    {
+      "id": "R08",
+      "title": "Rejected: plain http",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1148
+    },
+    {
+      "id": "R09",
+      "title": "Rejected: title too short",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1119
+    },
+    {
+      "id": "R10",
+      "title": "Rejected: prompt delimiter in description",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1128
+    },
+    {
+      "id": "R11",
+      "title": "Rejected: deadline in the past",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "on-chain: no promise created; reason \"deadline_at must be at least one minute in the future\"",
+      "ms": 42933
+    },
+    {
+      "id": "R12",
+      "title": "Rejected: deadline under one minute",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "on-chain: no promise created; reason \"deadline_at must be at least one minute in the future\"",
+      "ms": 14363
+    },
+    {
+      "id": "R13",
+      "title": "Rejected: blank promisor",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 1163
+    },
+    {
+      "id": "R14",
+      "title": "No rejected input created a promise",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "total_promises unchanged at 0",
+      "ms": 1179
+    },
+    {
+      "id": "H01",
+      "title": "File a promise; baseline recorded, promisor + revision log created",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "entry #1",
+      "ms": 43941
+    },
+    {
+      "id": "H03",
+      "title": "Baseline hash equals keccak256 of the fixture text recomputed locally",
+      "kind": "MODEL",
+      "status": "PASS",
+      "detail": "baseline hash independently reproduced",
+      "ms": 1129
+    },
+    {
+      "id": "H02",
+      "title": "Duplicate filing is refused",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (control call passes; node hides the reason)",
+      "ms": 3324
+    },
+    {
+      "id": "V01",
+      "title": "Verify the kept promise: evidence-grounded verdict",
+      "kind": "MODEL",
+      "status": "PASS",
+      "detail": "FULFILLED, quote: \"Single sign-on (SSO) is now available to every customer on all plans, including the free tier.\"",
+      "ms": 26173
+    },
+    {
+      "id": "V02",
+      "title": "Report integrity: quote is verbatim in the stored snapshot; hash recomputes",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "231 chars, hash reproduced",
+      "ms": 1172
+    },
+    {
+      "id": "V03",
+      "title": "No quote, no verdict: FULFILLED/BROKEN never stands without a citation",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "",
+      "ms": 1
+    },
+    {
+      "id": "V04",
+      "title": "Immediate re-verification is blocked by the cooldown",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (node hides the reason)",
+      "ms": 1121
+    },
+    {
+      "id": "D01",
+      "title": "Dispute by a different address re-hashes the live page",
+      "kind": "MODEL",
+      "status": "PASS",
+      "detail": "UPHELD; hash fb2628e5b9…",
+      "ms": 28236
+    },
+    {
+      "id": "D02",
+      "title": "A report can be disputed only once",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (node hides the reason)",
+      "ms": 1144
+    },
+    {
+      "id": "V05",
+      "title": "In-progress evidence -> IN_PROGRESS",
+      "kind": "MODEL",
+      "status": "PASS",
+      "detail": "IN_PROGRESS, quote: \"General availability for all customers is planned but has no release date yet.\"",
+      "ms": 57781
+    },
+    {
+      "id": "V06",
+      "title": "Cancellation evidence -> BROKEN",
+      "kind": "MODEL",
+      "status": "PASS",
+      "detail": "BROKEN, quote: \"the single sign-on (SSO) project has been cancelled and will not ship\"",
+      "ms": 58931
+    },
+    {
+      "id": "A01",
+      "title": "Prompt-injection page cannot force FULFILLED and is flagged",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "status IN_PROGRESS (raw IN_PROGRESS), flagged",
+      "ms": 43197
+    },
+    {
+      "id": "P01",
+      "title": "Only the submitter may repoint, and only after three failed checks",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "rejected (node hides the reason); rejected (node hides the reason)",
+      "ms": 10284
+    },
+    {
+      "id": "T01",
+      "title": "Deadline passes: non-fulfilled verdict is forced to BROKEN by the contract",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "final BROKEN, raw IN_PROGRESS, deadline_forced=true",
+      "ms": 137858
+    },
+    {
+      "id": "C01",
+      "title": "Statistics equal a brute-force recount of every promise",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "5 promises, 5 reports",
+      "ms": 2967
+    },
+    {
+      "id": "C02",
+      "title": "Promisor track record equals a recount of its promises",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "5 promises; reliability 33% over 3 judged",
+      "ms": 2258
+    },
+    {
+      "id": "C03",
+      "title": "Views are paginated and report lists carry no snapshot text",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "",
+      "ms": 2310
+    },
+    {
+      "id": "C04",
+      "title": "Reads need no wallet (anonymous client)",
+      "kind": "HARD",
+      "status": "PASS",
+      "detail": "",
+      "ms": 1114
+    }
+  ],
+  "txs": [
+    {
+      "label": "expected rejection: register_promise",
+      "hash": "0x6f669be2ae7dd8796eb07ff32729f4cf13e61fb8bbff086fca5f47079ee80495",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x6f669be2ae7dd8796eb07ff32729f4cf13e61fb8bbff086fca5f47079ee80495",
+      "seconds": 40,
+      "failed": false
+    },
+    {
+      "label": "expected rejection: register_promise",
+      "hash": "0xb1b1ba16c58fcbdb6fcf07010d993d2dae60684167abc492e80b2711afbe7d28",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0xb1b1ba16c58fcbdb6fcf07010d993d2dae60684167abc492e80b2711afbe7d28",
+      "seconds": 6,
+      "failed": false
+    },
+    {
+      "label": "register: Ship SSO to every customer",
+      "hash": "0xa22b74ae097268a4bae4be4742560b5b97bfbf4ecea9ee22dbef4cbc1e2f9e4e",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0xa22b74ae097268a4bae4be4742560b5b97bfbf4ecea9ee22dbef4cbc1e2f9e4e",
+      "seconds": 5,
+      "failed": false
+    },
+    {
+      "label": "verify #1",
+      "hash": "0x97fd0512b28d9547dfa76d1ac586598f1dfc85a51864de493d3a1c9cfeba85fc",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x97fd0512b28d9547dfa76d1ac586598f1dfc85a51864de493d3a1c9cfeba85fc",
+      "seconds": 16,
+      "failed": false
+    },
+    {
+      "label": "dispute (bob)",
+      "hash": "0x91104650b71a8ab4adfc61a9c8e373556111a5a8e4d2a306d72a3765d18e3f85",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x91104650b71a8ab4adfc61a9c8e373556111a5a8e4d2a306d72a3765d18e3f85",
+      "seconds": 1,
+      "failed": false
+    },
+    {
+      "label": "register: Release SSO in beta",
+      "hash": "0x413d64626e92ce232c608e0cad69df5aa30d7f2dba7457cc88244809f8e20101",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x413d64626e92ce232c608e0cad69df5aa30d7f2dba7457cc88244809f8e20101",
+      "seconds": 10,
+      "failed": false
+    },
+    {
+      "label": "verify #2",
+      "hash": "0x0394b261ce86b7707c1a3b02dfdde97c42ff4395d0f73834500f6aaa8073f29a",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x0394b261ce86b7707c1a3b02dfdde97c42ff4395d0f73834500f6aaa8073f29a",
+      "seconds": 22,
+      "failed": false
+    },
+    {
+      "label": "register: Deliver SSO after cancellation",
+      "hash": "0xb23548ae42971929573af9f8bcf682c53fd0d8f532bd4f9876e8ba5940a289fa",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0xb23548ae42971929573af9f8bcf682c53fd0d8f532bd4f9876e8ba5940a289fa",
+      "seconds": 12,
+      "failed": false
+    },
+    {
+      "label": "verify #3",
+      "hash": "0x5fbeee87610ee3335f5eed3249311560a471d6d2e39ddc1ad124ee60668a7f23",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x5fbeee87610ee3335f5eed3249311560a471d6d2e39ddc1ad124ee60668a7f23",
+      "seconds": 22,
+      "failed": false
+    },
+    {
+      "label": "register: Release SSO with a hostile page",
+      "hash": "0x646019ef5445f8f30b8ccd91c30e458528036e66ea9c7e22d35b27cd0a8d91e2",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x646019ef5445f8f30b8ccd91c30e458528036e66ea9c7e22d35b27cd0a8d91e2",
+      "seconds": 5,
+      "failed": false
+    },
+    {
+      "label": "verify #4",
+      "hash": "0x249c732ec31cef576a3ee56a7594f24be64b5cece32601f458dd95d745eb3b91",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x249c732ec31cef576a3ee56a7594f24be64b5cece32601f458dd95d745eb3b91",
+      "seconds": 11,
+      "failed": false
+    },
+    {
+      "label": "register: Release SSO before a short deadline",
+      "hash": "0x45ebde6618d40a4264b37a816262c8fae52e1b702ca6d7c5357f037f3684674f",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0x45ebde6618d40a4264b37a816262c8fae52e1b702ca6d7c5357f037f3684674f",
+      "seconds": 11,
+      "failed": false
+    },
+    {
+      "label": "verify #5",
+      "hash": "0xbb693857c4440e53e3e7dcb024098d309f23a53893e71285209da4fb56d38b72",
+      "explorer": "https://explorer-studio.genlayer.com/tx/0xbb693857c4440e53e3e7dcb024098d309f23a53893e71285209da4fb56d38b72",
+      "seconds": 10,
+      "failed": false
+    }
+  ]
+}

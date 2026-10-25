@@ -1,6 +1,7 @@
 // Shared helpers for the live Studionet scripts (deploy + end-to-end).
 // Plain ESM so it runs in a Codespace with `node` and the project's own
 // dependencies (genlayer-js, viem): no extra tooling.
+import "./throttle.mjs"; // first import: wraps fetch before genlayer-js / viem load
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

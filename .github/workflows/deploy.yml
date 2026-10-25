@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: https://promiseledger-3gd.pages.dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,11 +35,7 @@ jobs:
           VITE_CONTRACT_ADDRESS: ${{ vars.VITE_CONTRACT_ADDRESS }}
 
       - name: Deploy to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: promiseledger
-          directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        run: npx wrangler pages deploy dist --project-name=promiseledger --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { probeContract } from "./gate";
-import { LEGACY_V1_ADDRESS } from "./config";
+import { CONTRACT_ADDRESS, DEPLOYED_V2_ADDRESS, LEGACY_V1_ADDRESS, isConfiguredAddress } from "./config";
 
 const ADDR = "0x1111111111111111111111111111111111111111";
 const ok = { getVersion: async () => "2.0.0", getStats: async () => ({}) };
@@ -22,5 +22,10 @@ describe("probeContract", () => {
     const p = { getVersion: async () => Promise.reject(new Error("boom")), getStats: async () => Promise.reject(new Error("boom")) };
     const r = await probeContract(p, ADDR);
     expect(r.kind).toBe("unreachable");
+  });
+  it("the build ships with a configured v2 address that is not the legacy v1 one", () => {
+    expect(isConfiguredAddress(DEPLOYED_V2_ADDRESS)).toBe(true);
+    expect(DEPLOYED_V2_ADDRESS.toLowerCase()).not.toBe(LEGACY_V1_ADDRESS.toLowerCase());
+    expect(isConfiguredAddress(CONTRACT_ADDRESS)).toBe(true);
   });
 });

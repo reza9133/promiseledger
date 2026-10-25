@@ -7,11 +7,15 @@
 export const LEGACY_V1_ADDRESS = "0x5FA7e3fA2ddE37F3cA7b61E1C89D9396a57E264e";
 
 /**
- * The active v2 deployment comes from `VITE_CONTRACT_ADDRESS` only. There is
- * deliberately no baked-in default: an empty value puts the app in its
- * "contract not configured" state, which offers the labelled demo mode.
+ * The v2 deployment on GenLayer Studionet (verified by the live end-to-end
+ * run in reports/e2e-latest.md). `VITE_CONTRACT_ADDRESS` overrides it, for a
+ * redeploy or another network. Studionet is a shared simulator and can be
+ * reset; if it is, redeploy with `npm run deploy` and update this constant or
+ * the variable.
  */
-export const CONTRACT_ADDRESS: string = (import.meta.env.VITE_CONTRACT_ADDRESS ?? "").trim();
+export const DEPLOYED_V2_ADDRESS = "0x139A49E5fa487483D09F3bF6F1d029E2eE6a9B43";
+
+export const CONTRACT_ADDRESS: string = (import.meta.env.VITE_CONTRACT_ADDRESS ?? "").trim() || DEPLOYED_V2_ADDRESS;
 
 export function isConfiguredAddress(address: string = CONTRACT_ADDRESS): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(address);

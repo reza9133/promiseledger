@@ -1,15 +1,27 @@
 import { createClient } from "genlayer-js";
 import { TransactionStatus, type GenLayerClient, type GenLayerTransaction } from "genlayer-js/types";
 import { CHAIN, CONTRACT_ADDRESS, NETWORK_NAME } from "./chain";
-import { ContractRevertError, type LedgerStats, type PromiseRecord, type VerificationReport } from "./types";
+import { normalize } from "./normalize";
+import {
+  ContractRevertError,
+  type EvidenceRevision,
+  type Hex,
+  type LedgerStats,
+  type Limits,
+  type PromiseRecord,
+  type PromisorRecord,
+  type VerificationReport,
+} from "./types";
 
 type AnyClient = GenLayerClient<typeof CHAIN>;
 
-/** Read-only client. Works without a connected wallet — GenLayer reads are public RPC calls. */
+const ADDRESS = CONTRACT_ADDRESS as Hex;
+
+/** Read-only client. Works without a connected wallet: GenLayer reads are public RPC calls. */
 export const readClient: AnyClient = createClient({ chain: CHAIN });
 
-/** One write-capable client per connected wallet address. Reads still go over plain RPC (see genlayer-js internals); only the four signing methods route through `provider`. */
-export function makeWriteClient(address: `0x${string}`): AnyClient {
+/** One write-capable client per connected wallet address. Reads still use plain RPC; only the signing methods route through `provider`. */
+export function makeWriteClient(address: Hex): AnyClient {
   return createClient({
     chain: CHAIN,
     account: address,
@@ -17,14 +29,13 @@ export function makeWriteClient(address: `0x${string}`): AnyClient {
   });
 }
 
-/** Best-effort switch of the injected wallet onto GenLayer Studionet. Never fatal — writeContract re-checks the chain itself and we surface a clear error if it's still wrong. */
+/** Best-effort switch of the injected wallet onto GenLayer Studionet. Never fatal. */
 export async function ensureWalletOnCorrectNetwork(client: AnyClient): Promise<void> {
   try {
     await client.connect(NETWORK_NAME);
     return;
   } catch {
-    // Fall through to a manual chain switch — some wallets don't support the
-    // Snap-installation step inside client.connect().
+    // Some wallets don't support the Snap-installation step inside client.connect().
   }
   const eth = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!eth) return;
@@ -47,23 +58,15 @@ export async function ensureWalletOnCorrectNetwork(client: AnyClient): Promise<v
           ],
         });
       } catch {
-        // Adding the network failed too (user declined, or the wallet
-        // couldn't validate the RPC). getWalletChainId() below is what
-        // ultimately decides whether we're safe to write — this is only
-        // a convenience attempt.
+        // isWalletOnCorrectChain() is what ultimately decides whether a write is safe.
       }
     }
-    // Any other failure (user declined the switch, etc.) is left for the
-    // caller to discover via getWalletChainId().
   }
 }
 
-/** The wallet's *actual* active chain id, as MetaMask itself sees it — not
- * genlayer-js's internal (and, for Studio chains, deliberately skipped)
- * chain-match assertion. `eth_sendTransaction` is always broadcast against
- * whatever network the wallet currently has selected, regardless of which
- * chain this app's client was configured for, so this is the only check
- * that actually predicts whether a signed write can reach the contract. */
+/** The wallet's actual active chain id, as the wallet itself sees it. `eth_sendTransaction`
+ * always broadcasts to the wallet's selected network, so this is the check that predicts
+ * whether a signed write can reach the contract. */
 export async function getWalletChainId(): Promise<number | null> {
   const eth = typeof window !== "undefined" ? window.ethereum : undefined;
   if (!eth) return null;
@@ -76,22 +79,16 @@ export async function getWalletChainId(): Promise<number | null> {
 }
 
 export async function isWalletOnCorrectChain(): Promise<boolean> {
-  const id = await getWalletChainId();
-  return id === CHAIN.id;
+  return (await getWalletChainId()) === CHAIN.id;
 }
 
-function stripTag(message: string): string {
+export function stripTag(message: string): string {
   const m = message.match(/\[(EXPECTED|EXTERNAL)\]\s*(.*)/s);
   return (m ? m[2] : message).trim();
 }
 
-/** Recursively hunts a decoded transaction receipt for the contract's own
- * `"[EXPECTED] ..."` / `"[EXTERNAL] ..."` message, the convention every
- * `gl.vm.UserError` in promise_ledger.py follows. Field names inside the
- * on-chain receipt shift between SDK versions, so we scan for the tag
- * itself rather than trust one specific path. This is a last-resort net —
- * `simulateWriteContract` (below) is what actually catches most reverts. */
-function findTaggedMessage(value: unknown, depth = 0): string | null {
+/** Hunts a decoded receipt for the contract's own "[EXPECTED] ..." / "[EXTERNAL] ..." message. */
+export function findTaggedMessage(value: unknown, depth = 0): string | null {
   if (depth > 6 || value == null) return null;
   if (typeof value === "string") {
     const m = value.match(/\[(EXPECTED|EXTERNAL)\][^"]*/);
@@ -120,9 +117,7 @@ function isUserRejection(err: any): boolean {
 }
 
 function friendlyWriteError(err: any): Error {
-  if (isUserRejection(err)) {
-    return new ContractRevertError("Cancelled in the wallet.");
-  }
+  if (isUserRejection(err)) return new ContractRevertError("Cancelled in the wallet.");
   const msg = String(err?.message ?? err ?? "");
   if (msg.startsWith("Wallet is on chain")) {
     return new ContractRevertError(
@@ -131,59 +126,36 @@ function friendlyWriteError(err: any): Error {
   }
   if (msg.toLowerCase().includes("insufficient funds")) {
     return new ContractRevertError(
-      "This wallet has no GEN on Studionet. Open studio.genlayer.com, select this same address in the account picker, and use the faucet (💧) button to fund it.",
+      "This wallet has no GEN on Studionet. Open studio.genlayer.com, select this same address in the account picker, and use the faucet button to fund it.",
     );
   }
   return new ContractRevertError(msg || "The transaction failed.");
 }
 
-/** Submits a write, waits for it to be accepted, and turns a failed
- * execution into a ContractRevertError with the contract's own message. */
 async function submitWrite(
   client: AnyClient,
   functionName: string,
   args: unknown[],
 ): Promise<{ hash: string; receipt: GenLayerTransaction }> {
-  // Fail fast if the wallet is on the wrong chain. eth_sendTransaction
-  // always broadcasts to whatever network the wallet currently has
-  // selected — if that's not GenLayer Studio, the write can never arrive,
-  // and without this check the only symptom is a multi-minute silent hang
-  // before waitForTransactionReceipt eventually times out.
   if (!(await isWalletOnCorrectChain())) {
     throw new ContractRevertError(
-      "Your wallet isn't on GenLayer Studio Network right now. Click your wallet chip to switch, then try again.",
+      "Your wallet isn't on GenLayer Studio Network right now. Open the wallet menu to switch, then try again.",
     );
   }
 
-  // Dry-run first: `simulateWriteContract` runs the same call as a plain
-  // `gen_call`, so a UserError surfaces immediately as a thrown
-  // `"gen_call failed: <message>"` — no wallet signature, no waiting on
-  // consensus, no gas spent on something that was always going to revert.
+  // Dry-run first: a UserError surfaces immediately as "gen_call failed: <message>",
+  // with no signature and no wait on consensus.
   try {
-    await client.simulateWriteContract({
-      address: CONTRACT_ADDRESS,
-      functionName,
-      args: args as any[],
-    });
+    await client.simulateWriteContract({ address: ADDRESS, functionName, args: args as any[] });
   } catch (err: any) {
-    const msg = String(err?.message ?? "");
-    const m = msg.match(/^gen_call failed:\s*(.*)$/s);
-    if (m) {
-      throw new ContractRevertError(stripTag(m[1]));
-    }
-    // Any other failure here (a flaky RPC call, a transient network hiccup)
-    // isn't proof the real write would fail — fall through and let the
-    // actual transaction be the judge.
+    const m = String(err?.message ?? "").match(/^gen_call failed:\s*(.*)$/s);
+    if (m) throw new ContractRevertError(stripTag(m[1]));
+    // Any other failure here is not proof the real write would fail.
   }
 
   let hash: string;
   try {
-    hash = await client.writeContract({
-      address: CONTRACT_ADDRESS,
-      functionName,
-      args: args as any[],
-      value: 0n,
-    });
+    hash = await client.writeContract({ address: ADDRESS, functionName, args: args as any[], value: 0n });
   } catch (err) {
     throw friendlyWriteError(err);
   }
@@ -196,44 +168,41 @@ async function submitWrite(
     fullTransaction: true,
   } as any);
 
-  const succeeded = (receipt as any).txExecutionResultName !== "FINISHED_WITH_ERROR";
-  if (!succeeded) {
-    const tagged = findTaggedMessage(receipt);
+  if ((receipt as any).txExecutionResultName === "FINISHED_WITH_ERROR") {
     throw new ContractRevertError(
-      tagged ??
-        "The contract rejected this action. It may be a cooldown, a permission check, or the evidence page couldn't be reached — reload and check the entry's current state.",
+      findTaggedMessage(receipt) ??
+        "The contract rejected this action. It may be a cooldown, a permission check, or the evidence page couldn't be reached. Reload and check the entry's current state.",
     );
   }
-
   return { hash, receipt };
 }
 
 // ---------------------------------------------------------------------
-// Reads
+// Reads (all results are normalised to plain JSON)
 // ---------------------------------------------------------------------
 
 async function readOne<T>(functionName: string, args: unknown[] = []): Promise<T> {
-  return readClient.readContract({
-    address: CONTRACT_ADDRESS,
-    functionName,
-    args: args as any[],
-  }) as Promise<T>;
+  const raw = await readClient.readContract({ address: ADDRESS, functionName, args: args as any[] });
+  return normalize<T>(raw);
 }
 
-export const getPromise = (id: number) => readOne<PromiseRecord>("get_promise", [id]);
-
-export const getReport = (id: number) => readOne<VerificationReport>("get_report", [id]);
-
-export const listPromises = (offset: number, limit: number) =>
-  readOne<PromiseRecord[]>("list_promises", [offset, limit]);
-
-export const listPromiseReports = (promiseId: number, offset: number, limit: number) =>
-  readOne<VerificationReport[]>("list_promise_reports", [promiseId, offset, limit]);
-
-export const listSubmitterPromises = (submitter: string) =>
-  readOne<number[]>("list_submitter_promises", [submitter]);
-
-export const getStats = () => readOne<LedgerStats>("get_stats");
+export const chainReads = {
+  getVersion: () => readOne<string>("get_version"),
+  getLimits: () => readOne<Limits>("get_limits"),
+  getStats: () => readOne<LedgerStats>("get_stats"),
+  getPromise: (id: number) => readOne<PromiseRecord>("get_promise", [id]),
+  getReport: (id: number) => readOne<VerificationReport>("get_report", [id]),
+  getReportSnapshot: (id: number) => readOne<string>("get_report_snapshot", [id]),
+  listPromises: (offset: number, limit: number) => readOne<PromiseRecord[]>("list_promises", [offset, limit]),
+  listPromiseReports: (promiseId: number, offset: number, limit: number) =>
+    readOne<VerificationReport[]>("list_promise_reports", [promiseId, offset, limit]),
+  getEvidenceRevisions: (promiseId: number) => readOne<EvidenceRevision[]>("get_evidence_revisions", [promiseId]),
+  listSubmitterPromises: (submitter: string) => readOne<number[]>("list_submitter_promises", [submitter]),
+  getPromisor: (name: string) => readOne<PromisorRecord>("get_promisor", [name]),
+  listPromisors: (offset: number, limit: number) => readOne<PromisorRecord[]>("list_promisors", [offset, limit]),
+  listPromisorPromises: (name: string, offset: number, limit: number) =>
+    readOne<PromiseRecord[]>("list_promisor_promises", [name, offset, limit]),
+};
 
 // ---------------------------------------------------------------------
 // Writes
@@ -241,33 +210,27 @@ export const getStats = () => readOne<LedgerStats>("get_stats");
 
 export async function registerPromise(
   client: AnyClient,
-  title: string,
-  description: string,
-  evidenceUrl: string,
-  deadlineAtUnix: number,
-): Promise<{ hash: string; promiseId: number }> {
+  address: string,
+  input: { title: string; description: string; promisor: string; evidenceUrl: string; deadlineAtUnix: number },
+): Promise<{ hash: string; promiseId: number | null }> {
   const { hash } = await submitWrite(client, "register_promise", [
-    title,
-    description,
-    evidenceUrl,
-    deadlineAtUnix,
+    input.title,
+    input.description,
+    input.promisor,
+    input.evidenceUrl,
+    input.deadlineAtUnix,
   ]);
-  // Promise ids are assigned sequentially starting at 1 with no gaps, so
-  // the id just minted is exactly the new total — more reliable than
-  // picking a return-value field out of a receipt shape that varies
-  // between SDK versions.
-  const stats = await getStats();
-  return { hash, promiseId: stats.total_promises };
+  // The new id is the last entry of this submitter's own list, which cannot
+  // race with other people's filings the way a global counter would.
+  try {
+    const ids = await chainReads.listSubmitterPromises(address);
+    return { hash, promiseId: ids.length ? ids[ids.length - 1] : null };
+  } catch {
+    return { hash, promiseId: null };
+  }
 }
 
-export async function verifyPromise(client: AnyClient, promiseId: number) {
-  return submitWrite(client, "verify_promise", [promiseId]);
-}
-
-export async function disputeReport(client: AnyClient, reportId: number) {
-  return submitWrite(client, "dispute_report", [reportId]);
-}
-
-export async function updateEvidenceUrl(client: AnyClient, promiseId: number, newUrl: string) {
-  return submitWrite(client, "update_evidence_url", [promiseId, newUrl]);
-}
+export const verifyPromise = (client: AnyClient, promiseId: number) => submitWrite(client, "verify_promise", [promiseId]);
+export const disputeReport = (client: AnyClient, reportId: number) => submitWrite(client, "dispute_report", [reportId]);
+export const updateEvidenceUrl = (client: AnyClient, promiseId: number, newUrl: string) =>
+  submitWrite(client, "update_evidence_url", [promiseId, newUrl]);

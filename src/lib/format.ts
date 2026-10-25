@@ -8,10 +8,13 @@ export function shortHash(hash: string | undefined | null, lead = 8, tail = 6): 
   return hash.length > lead + tail + 1 ? `${hash.slice(0, lead)}…${hash.slice(-tail)}` : hash;
 }
 
+export function entryNumber(id: number): string {
+  return `#${String(id).padStart(4, "0")}`;
+}
+
 export function formatDate(unixSeconds: number | undefined | null): string {
   if (!unixSeconds) return "—";
-  const d = new Date(unixSeconds * 1000);
-  return d.toLocaleDateString(undefined, {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -20,8 +23,7 @@ export function formatDate(unixSeconds: number | undefined | null): string {
 
 export function formatDateTime(unixSeconds: number | undefined | null): string {
   if (!unixSeconds) return "—";
-  const d = new Date(unixSeconds * 1000);
-  return d.toLocaleString(undefined, {
+  return new Date(unixSeconds * 1000).toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -30,7 +32,7 @@ export function formatDateTime(unixSeconds: number | undefined | null): string {
   });
 }
 
-/** "3 days left" / "overdue by 3 days" relative to now. */
+/** "3d left" / "overdue by 3d" relative to now. */
 export function relativeToDeadline(deadlineUnix: number, nowUnix = Date.now() / 1000): string {
   const diff = deadlineUnix - nowUnix;
   const abs = Math.abs(diff);
@@ -49,11 +51,7 @@ export function timeAgo(unixSeconds: number, nowUnix = Date.now() / 1000): strin
   return formatDate(unixSeconds);
 }
 
-export function cooldownRemaining(
-  lastVerifiedAt: number,
-  minIntervalSeconds: number,
-  nowUnix = Date.now() / 1000,
-): number {
+export function cooldownRemaining(lastVerifiedAt: number, minIntervalSeconds: number, nowUnix = Date.now() / 1000): number {
   if (!lastVerifiedAt) return 0;
   return Math.max(0, lastVerifiedAt + minIntervalSeconds - nowUnix);
 }
@@ -65,12 +63,17 @@ export function formatSeconds(total: number): string {
   return m > 0 ? `${m}m ${r}s` : `${r}s`;
 }
 
+export function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  return `${(n / 1024).toFixed(1)} KB`;
+}
+
 const STATUS_COPY: Record<string, { label: string; description: string }> = {
   PENDING: { label: "Filed", description: "Registered, not yet checked against evidence." },
   FULFILLED: { label: "Fulfilled", description: "Evidence shows the promise was delivered." },
   IN_PROGRESS: { label: "In progress", description: "Evidence shows real movement, not complete." },
-  BROKEN: { label: "Broken", description: "Evidence shows it was dropped, or the deadline passed." },
-  UNVERIFIABLE: { label: "Unverifiable", description: "The evidence page couldn't be read." },
+  BROKEN: { label: "Broken", description: "Evidence shows it was dropped, or the deadline passed without delivery." },
+  UNVERIFIABLE: { label: "Unverifiable", description: "The evidence didn't contain enough, or couldn't be read." },
 };
 
 export function statusLabel(status: string): string {
@@ -79,4 +82,19 @@ export function statusLabel(status: string): string {
 
 export function statusDescription(status: string): string {
   return STATUS_COPY[status]?.description ?? "";
+}
+
+/** Plain-language explanation of how a report's raw model verdict became its final verdict. */
+export function verdictExplanation(r: {
+  raw_status: string;
+  status: string;
+  deadline_forced: boolean;
+  citation: string;
+}): string | null {
+  if (r.raw_status === r.status) return null;
+  if (r.deadline_forced)
+    return `The model judged this ${statusLabel(r.raw_status).toLowerCase()}, but the deadline had passed without a fulfilled verdict, so the contract recorded it as broken.`;
+  if (!r.citation && (r.raw_status === "FULFILLED" || r.raw_status === "BROKEN"))
+    return `The model judged this ${statusLabel(r.raw_status).toLowerCase()} without a verbatim quote from the page, so the contract downgraded it to unverifiable. No quote, no verdict.`;
+  return `The model said ${statusLabel(r.raw_status).toLowerCase()}; contract rules produced ${statusLabel(r.status).toLowerCase()}.`;
 }

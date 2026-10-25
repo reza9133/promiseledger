@@ -1,20 +1,29 @@
 import { statusLabel } from "../lib/format";
 
-export function StatusSeal({ status, size = "md" }: { status: string; size?: "sm" | "md" | "lg" }) {
-  const cls = `seal seal-${size} seal-${status.toLowerCase()}`;
+const GLYPH: Record<string, string> = {
+  PENDING: "○",
+  IN_PROGRESS: "◐",
+  FULFILLED: "✓",
+  BROKEN: "✕",
+  UNVERIFIABLE: "?",
+};
+
+export function StatusSeal({ status, size = "md", stamp = false }: { status: string; size?: "sm" | "md" | "lg"; stamp?: boolean }) {
   return (
-    <span className={cls}>
-      <span className="seal-ring" aria-hidden="true" />
+    <span className={`seal seal-${size} seal-${status.toLowerCase()} ${stamp ? "seal-stamp" : ""}`.trim()}>
+      <span className="seal-glyph" aria-hidden="true">
+        {GLYPH[status] ?? "·"}
+      </span>
       {statusLabel(status)}
     </span>
   );
 }
 
 export function DisputeTag({ status }: { status: string }) {
-  if (!status) {
-    return <span className="tag tag-dispute-pending">disputed · pending</span>;
-  }
-  const cls = status === "UPHELD" ? "tag-dispute-upheld" : "tag-dispute-overturned";
-  const label = status === "UPHELD" ? "disputed · upheld" : "disputed · overturned";
-  return <span className={`tag ${cls}`}>{label}</span>;
+  if (!status) return <span className="tag tag-neutral">disputed · pending</span>;
+  return status === "UPHELD" ? (
+    <span className="tag tag-good">dispute upheld · page unchanged</span>
+  ) : (
+    <span className="tag tag-warn">dispute overturned · page changed</span>
+  );
 }

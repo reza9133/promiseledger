@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { useToast } from "../hooks/useToast";
 import { shortAddr } from "../lib/format";
-import { STUDIO_URL } from "../lib/chain";
+import { STUDIO_URL } from "../lib/config";
 
 export function WalletMenu() {
   const { address, chainOk, switchNetwork, disconnect } = useWallet();
@@ -12,16 +12,16 @@ export function WalletMenu() {
 
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: MouseEvent) {
+    const onDown = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
+    };
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onPointerDown);
+    };
+    document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
@@ -33,20 +33,9 @@ export function WalletMenu() {
       await navigator.clipboard.writeText(address!);
       push("info", "Address copied.");
     } catch {
-      push("error", "Couldn't copy that — select and copy it by hand.");
+      push("error", "Couldn't copy that. Select and copy it by hand.");
     }
     setOpen(false);
-  }
-
-  async function handleSwitch() {
-    await switchNetwork();
-    setOpen(false);
-  }
-
-  async function handleDisconnect() {
-    await disconnect();
-    setOpen(false);
-    push("info", "Wallet disconnected.");
   }
 
   return (
@@ -56,41 +45,43 @@ export function WalletMenu() {
         className={`wallet-chip ${chainOk === false ? "wallet-chip-warn" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-haspopup="true"
       >
         {chainOk === false ? "Wrong network" : shortAddr(address)}
-        <span className="wallet-chip-caret" aria-hidden="true">
-          ▾
-        </span>
+        <span aria-hidden="true"> ▾</span>
       </button>
-
       {open && (
-        <div className="wallet-dropdown" role="menu">
+        <div className="wallet-dropdown">
           <div className="wallet-dropdown-address" title={address}>
             {address}
           </div>
-
           {chainOk === false && (
-            <button type="button" className="wallet-dropdown-item wallet-dropdown-warn" onClick={handleSwitch}>
+            <button
+              type="button"
+              className="wallet-dropdown-item wallet-dropdown-warn"
+              onClick={async () => {
+                await switchNetwork();
+                setOpen(false);
+              }}
+            >
               Switch to GenLayer Studio
             </button>
           )}
-
           <button type="button" className="wallet-dropdown-item" onClick={copyAddress}>
             Copy address
           </button>
-
-          <a
-            className="wallet-dropdown-item"
-            href={STUDIO_URL}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setOpen(false)}
-          >
+          <a className="wallet-dropdown-item" href={STUDIO_URL} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
             Fund on Studio ↗
           </a>
-
-          <button type="button" className="wallet-dropdown-item wallet-dropdown-danger" onClick={handleDisconnect}>
+          <button
+            type="button"
+            className="wallet-dropdown-item wallet-dropdown-danger"
+            onClick={async () => {
+              await disconnect();
+              setOpen(false);
+              push("info", "Wallet disconnected.");
+            }}
+          >
             Disconnect
           </button>
         </div>

@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ensureWalletOnCorrectNetwork, isWalletOnCorrectChain, makeWriteClient } from "../lib/genlayer";
+import type { makeWriteClient } from "../lib/genlayer";
+
+// The SDK is large; load it only when a wallet action actually needs it.
+const sdk = () => import("../lib/genlayer");
 
 type WalletStatus = "idle" | "connecting" | "connected" | "unavailable";
 
@@ -64,13 +67,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const clientRef = useRef<ReturnType<typeof makeWriteClient> | null>(null);
 
   const recheckChain = useCallback(async () => {
-    setChainOk(await isWalletOnCorrectChain());
+    setChainOk(await (await sdk()).isWalletOnCorrectChain());
   }, []);
 
   const setupFor = useCallback(
     async (addr: `0x${string}`) => {
       clearDisconnectedMark();
-      const client = makeWriteClient(addr);
+      const { makeWriteClient: make, ensureWalletOnCorrectNetwork } = await sdk();
+      const client = make(addr);
       clientRef.current = client;
       setAddress(addr);
       setStatus("connected");
@@ -100,7 +104,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const switchNetwork = useCallback(async () => {
     if (!clientRef.current) return;
-    await ensureWalletOnCorrectNetwork(clientRef.current);
+    await (await sdk()).ensureWalletOnCorrectNetwork(clientRef.current);
     await recheckChain();
   }, [recheckChain]);
 

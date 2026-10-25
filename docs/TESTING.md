@@ -19,6 +19,6 @@ Harness note: `vm.warp()` does not refresh the cached `gl.message_raw["datetime"
 2. Open a Codespace (the devcontainer installs everything).
 3. `npm run deploy` → prints the contract address (or pass `PL_CONTRACT_ADDRESS`).
 4. `PL_CONTRACT_ADDRESS=0x… npm run e2e` (add `-- --quick` to skip the deadline scenario, `-- --strict` to fail on model-dependent differences).
-5. Commit `reports/e2e-latest.md` (or download the artifact from the *Live Studionet E2E* workflow) and link it in the submission.
+5. Commit `reports/e2e-latest.md` and link it in the submission.
 
 Steps are HARD (deterministic contract behaviour) or MODEL (depends on what real validators or the web renderer do); only HARD failures fail the run unless `--strict`.

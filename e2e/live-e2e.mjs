@@ -78,15 +78,60 @@ let alice, bob, aliceClient, bobClient, reader;
 
 const read = async (fn, a = []) => normalize(await reader.readContract({ address, functionName: fn, args: a }));
 
-async function simulateRevert(client, fn, a, needle) {
+const safeJson = (v) => { try { return JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)) ?? ""; } catch { return String(v); } };
+
+/** Every string an error exposes: message, details, viem metaMessages, data and the whole cause chain. */
+function errorText(err, depth = 0) {
+  if (err == null || depth > 5) return "";
+  if (typeof err === "string") return err;
+  const parts = [];
+  for (const k of ["shortMessage", "message", "details", "reason"]) if (typeof err[k] === "string") parts.push(err[k]);
+  if (Array.isArray(err.metaMessages)) parts.push(...err.metaMessages.map(String));
+  if (err.data != null) parts.push(typeof err.data === "string" ? err.data : safeJson(err.data));
+  if (err.cause) parts.push(errorText(err.cause, depth + 1));
+  return parts.join("\n");
+}
+
+/**
+ * Asserts that `fn(...a)` is rejected by the contract with a reason containing `needle`.
+ *
+ * 1. Free path: simulate the call (gen_call). If the node reports the contract's own reason, check it.
+ * 2. Fallback: Studionet's gen_call often reports only a generic "execution failed" and the
+ *    simulation carries no transaction timestamp (so time-based rules such as the deadline window
+ *    cannot be evaluated there at all). In that case the call is sent as a real transaction and the
+ *    reason is read from the failed receipt. A transaction that unexpectedly succeeds fails the step.
+ * A revert for a different reason always fails the step: "it reverted" alone proves nothing.
+ */
+async function expectRevert(client, fn, a, needle) {
+  const wants = (m) => m.toLowerCase().includes(needle.toLowerCase());
+  let why;
   try {
     await client.simulateWriteContract({ address, functionName: fn, args: a });
+    why = "simulation succeeded (no tx timestamp there)";
   } catch (err) {
-    const msg = String(err?.message ?? err);
-    expect(msg.toLowerCase().includes(needle.toLowerCase()), `reverted, but with "${msg.slice(0, 200)}" instead of one containing "${needle}"`);
-    return msg;
+    const msg = errorText(err);
+    if (wants(msg)) return `simulation: "${needle}"`;
+    const tagged = taggedMessage(msg);
+    expect(!tagged, `reverted for another reason: "${tagged}" (wanted one containing "${needle}")`);
+    why = "simulation gave no reason";
   }
-  throw new Error(`expected a revert containing "${needle}", but the call succeeded`);
+
+  let hash;
+  try {
+    hash = await client.writeContract({ address, functionName: fn, args: a, value: 0n });
+  } catch (err) {
+    const msg = errorText(err);
+    expect(wants(msg), `submission rejected, but with "${msg.slice(0, 200)}" instead of one containing "${needle}"`);
+    return `submission rejected: "${needle}"`;
+  }
+  const t0 = Date.now();
+  const receipt = await client.waitForTransactionReceipt({ hash, status: TransactionStatus.ACCEPTED, interval: 3000, retries: 200 });
+  txs.push({ label: `expected revert: ${fn}`, hash, explorer: `${EXPLORER}/tx/${hash}`, seconds: Math.round((Date.now() - t0) / 1000), failed: receiptFailed(receipt) });
+  expect(receiptFailed(receipt), `expected a revert containing "${needle}", but the transaction succeeded (${hash})`);
+  const reason = taggedMessage(receipt);
+  expect(reason, `the transaction failed on-chain but the receipt holds no [EXPECTED]/[EXTERNAL] reason: ${safeJson(receipt).slice(0, 300)}`);
+  expect(wants(reason), `reverted on-chain, but with "${reason.slice(0, 200)}" instead of one containing "${needle}"`);
+  return `on-chain (${why}): "${reason.slice(0, 70)}"`;
 }
 
 async function write(client, fn, a, label) {
@@ -172,7 +217,8 @@ async function main() {
 
   const before = await read("get_stats").catch(() => null);
 
-  // ---- rule enforcement: reverts are free (gen_call), no consensus needed
+  // ---- rule enforcement: each rejection must carry the contract's own reason (simulated if the node
+  //      reports it, otherwise confirmed from the failed on-chain receipt; see expectRevert)
   const okArgs = (over = {}) => {
     const a = { title: `Rejected promise [${RUN_ID}]`, description: "Counts as kept once the thing is really done.", promisor: "Northwind", url: fixtureUrl("kept"), deadline: nowUnix() + 86400, ...over };
     return [a.title, a.description, a.promisor, a.url, a.deadline];
@@ -194,7 +240,7 @@ async function main() {
   ];
   for (const [i, [name, over, needle]] of rejections.entries()) {
     await step(`R${String(i + 1).padStart(2, "0")}`, `Rejected: ${name}`, "HARD", async () => {
-      await simulateRevert(aliceClient, "register_promise", okArgs(over), needle);
+      return await expectRevert(aliceClient, "register_promise", okArgs(over), needle);
     });
   }
 
@@ -219,7 +265,7 @@ async function main() {
   });
 
   await step("H02", "Duplicate filing is refused", "HARD", async () => {
-    await simulateRevert(aliceClient, "register_promise", [`Ship SSO to every customer [${RUN_ID}]`, "Counts as kept once SSO is generally available.", "Someone else", fixtureUrl("kept"), nowUnix() + 86400], "already filed");
+    return await expectRevert(aliceClient, "register_promise", [`Ship SSO to every customer [${RUN_ID}]`, "Counts as kept once SSO is generally available.", "Someone else", fixtureUrl("kept"), nowUnix() + 86400], "already filed");
   });
 
   let keptReport;
@@ -246,7 +292,7 @@ async function main() {
   });
 
   await step("V04", "Immediate re-verification is blocked by the cooldown", "HARD", async () => {
-    await simulateRevert(bobClient, "verify_promise", [kept.id], "cooldown");
+    return await expectRevert(bobClient, "verify_promise", [kept.id], "cooldown");
   });
 
   await step("D01", "Dispute by a different address re-hashes the live page", "MODEL", async () => {
@@ -258,7 +304,7 @@ async function main() {
   });
 
   await step("D02", "A report can be disputed only once", "HARD", async () => {
-    await simulateRevert(aliceClient, "dispute_report", [keptReport.id], "already been disputed");
+    return await expectRevert(aliceClient, "dispute_report", [keptReport.id], "already been disputed");
   });
 
   // ---- other verdicts
@@ -289,8 +335,9 @@ async function main() {
   });
 
   await step("P01", "Only the submitter may repoint, and only after three failed checks", "HARD", async () => {
-    await simulateRevert(bobClient, "update_evidence_url", [kept.id, fixtureUrl("progress")], "only the original submitter");
-    await simulateRevert(aliceClient, "update_evidence_url", [kept.id, fixtureUrl("progress")], "three failed checks");
+    const a = await expectRevert(bobClient, "update_evidence_url", [kept.id, fixtureUrl("progress")], "only the original submitter");
+    const b = await expectRevert(aliceClient, "update_evidence_url", [kept.id, fixtureUrl("progress")], "three failed checks");
+    return `${a}; ${b}`;
   });
 
   // ---- deadline forcing (slow)

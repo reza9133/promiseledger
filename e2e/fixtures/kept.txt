@@ -1,0 +1,3 @@
+Northwind Cloud product changelog
+
+Release 4.2 (May 3): Single sign-on (SSO) is now available to every customer on all plans, including the free tier. SAML and OIDC are both supported and documented. The beta label has been removed.

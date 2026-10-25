@@ -1,0 +1,3 @@
+Northwind Cloud product roadmap
+
+Single sign-on (SSO) is in private beta with three design partners. Engineering is finishing SAML support and the admin console. General availability for all customers is planned but has no release date yet.

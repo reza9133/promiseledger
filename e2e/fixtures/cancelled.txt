@@ -1,0 +1,3 @@
+Northwind Cloud product update
+
+The single sign-on (SSO) project has been cancelled and will not ship. The team was reassigned to billing. Customers who asked for SSO should use the existing password login.

@@ -33,7 +33,7 @@ Builds on the accepted v1 (a register of public promises judged by GenLayer vali
 ### Tests and tooling
 - 195 contract tests in direct mode: normal, adversarial, consensus-logic (validator) and randomised invariant tests.
 - Mutation check: 31 deliberately injected bugs, all caught.
-- `e2e/live-e2e.mjs`: live Studionet end-to-end run with a Markdown/JSON report; Codespaces devcontainer; CI and manual E2E workflows.
+- `e2e/live-e2e.mjs`: live Studionet end-to-end run with a Markdown/JSON report; Codespaces devcontainer (everything installs on first start).
 
 ### Upgrade notes
 The ABI changed (`register_promise` takes a `promisor`; reports no longer carry `snapshot`), so v2 must be deployed as a **new contract** (`npm run deploy`) and the frontend pointed at it with `VITE_CONTRACT_ADDRESS`. The v1 address remains readable only by v1 clients.

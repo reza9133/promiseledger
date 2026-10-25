@@ -1,0 +1,19 @@
+{
+  "name": "PromiseLedger v2",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "forwardPorts": [5173, 4173],
+  "portsAttributes": {
+    "5173": { "label": "vite dev" },
+    "4173": { "label": "vite preview" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "dbaeumer.vscode-eslint"],
+      "settings": { "python.defaultInterpreterPath": ".venv/bin/python" }
+    }
+  }
+}

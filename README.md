@@ -63,7 +63,16 @@ reports/                      generated end-to-end reports
 ```
 
 ## Deploying the site
-`.github/workflows/deploy.yml` builds and publishes to Cloudflare Pages on every push to `main` (secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; variable `VITE_CONTRACT_ADDRESS`). `.github/workflows/ci.yml` runs all tests; `e2e-live.yml` runs the live scenario on demand.
+The repository is connected directly to Cloudflare Pages (Git integration), so every push to `main` builds and publishes the site; there is no GitHub Actions workflow for it. Settings in Cloudflare Pages:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Node version | 20 or newer (`NODE_VERSION` variable if the default is older) |
+| `VITE_CONTRACT_ADDRESS` | optional; the build already points at the v2 deployment `0x139A49E5fa487483D09F3bF6F1d029E2eE6a9B43` |
+
+`wrangler.toml` pins the project name and output directory. `public/_redirects` serves `index.html` for every path, which the client-side router needs (refreshing `/promise/3` would 404 without it). Run `npm run test:all` locally or in a Codespace before pushing, since nothing runs the tests automatically.
 
 > Studionet is a shared, hosted simulator, not a persistent testnet. State can be reset without notice.
 

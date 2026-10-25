@@ -25,10 +25,10 @@ Builds on the accepted v1 (a register of public promises judged by GenLayer vali
 
 ### Frontend
 - New original logo and brand kit (`public/brand/`), favicon, OG image.
-- 11 routes (home, ledger, case file, filing, promisors, promisor profile, my filings, stats, docs, about, 404), all lazy-loaded.
+- 11 routes (home, ledger, case file, filing, promisors, promisor profile, my filings, stats, docs, about, 404); every page except the home page is lazy-loaded.
 - Lazy 3D hero (three.js) with SVG / reduced-motion / no-WebGL fallbacks; light and dark themes.
 - Stale-while-revalidate cache with request de-duplication; lazy snapshots; contract-version gate; labelled, read-only demo mode.
-- 160 unit/component/page tests; typecheck, lint, build green.
+- 161 unit/component/page tests; typecheck, lint, build green.
 
 ### Tests and tooling
 - 195 contract tests in direct mode: normal, adversarial, consensus-logic (validator) and randomised invariant tests.

@@ -133,10 +133,19 @@ async function expectRevert(client, fn, a, needle, { control, onchain = false } 
       expect(!tagged, `reverted for another reason: "${tagged}" (wanted one containing "${needle}")`);
       expect(GENERIC_REVERT.test(msg), `simulation failed for a reason that is not a contract revert: ${msg.slice(0, 200)}`);
       if (control) {
-        const key = `${fn}:${safeJson(control)}`;
+        // keyed by title + url only: the deadline inside `control` changes on every call
+        const key = `${fn}:${control[0]}:${control[3]}`;
         if (!controls.has(key)) {
-          try { await client.simulateWriteContract({ address, functionName: fn, args: control }); controls.set(key, null); }
-          catch (e) { controls.set(key, errorText(e).slice(0, 200)); }
+          let last = "";
+          for (let i = 0; i < 4; i++) {
+            try { await client.simulateWriteContract({ address, functionName: fn, args: control }); last = null; break; }
+            catch (e) {
+              last = errorText(e).slice(0, 200);
+              if (!/internal error|STATUS_NOT_OK/i.test(last)) break; // only a node hiccup is worth retrying
+              await sleep(3000);
+            }
+          }
+          controls.set(key, last);
         }
         expect(controls.get(key) === null, `control call (same method, valid input) also failed: ${controls.get(key)}`);
       }

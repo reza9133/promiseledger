@@ -1,140 +1,70 @@
-# PromiseLedger — frontend
+# PromiseLedger v2
 
-A frontend for the `PromiseLedger` Intelligent Contract deployed at
-[`0x5FA7e3fA2ddE37F3cA7b61E1C89D9396a57E264e`](https://explorer-studio.genlayer.com/contracts/0x5FA7e3fA2ddE37F3cA7b61E1C89D9396a57E264e)
-on **GenLayer Studionet**.
+A register of public promises, judged by [GenLayer](https://genlayer.com) validators against an evidence page. File a promise, point it at the page that will prove it, and let validators keep re-checking. Every verdict carries a **verbatim quote** and the **hash of the page** it came from. **No quote, no verdict.**
 
-It lets anyone:
+![home](docs/screenshots/desktop-home.png)
 
-- browse the register of filed promises and their current verdict,
-- **file a promise** with an evidence page — validators take a baseline
-  snapshot immediately,
-- **verify** a promise, which re-fetches the evidence, asks validators to
-  judge FULFILLED / IN_PROGRESS / BROKEN / UNVERIFIABLE, and stores the
-  verbatim citation the verdict was drawn from,
-- **dispute** a report (a plain hash comparison: has the evidence page
-  changed since the report was written?),
-- and, as the original submitter, **repoint** a promise at a new evidence
-  URL if three checks in a row failed to read the old one.
+- Contract: [`contracts/promise_ledger.py`](contracts/promise_ledger.py) (Intelligent Contract, GenLayer Studionet)
+- App: React + TypeScript + Vite, talks to the contract directly through `genlayer-js` (no backend)
+- What changed since v1: [CHANGELOG.md](CHANGELOG.md) · milestone text: [docs/MILESTONE.md](docs/MILESTONE.md)
 
-No backend — the app talks to the contract directly over `genlayer-js`,
-reads work without a wallet, and writes go through whatever wallet you
-connect (MetaMask or any injected EIP-1193 provider).
-
-> **Studionet is a shared, hosted simulator, not a persistent testnet.**
-> GenLayer can reset its state without notice, so don't rely on entries
-> filed here surviving indefinitely. If you later redeploy the contract
-> onto Bradbury or Asimov, see "Pointing this at a different deployment"
-> below.
-
-## Run it
+## Quick start
 
 ```bash
 npm install
-npm run dev
+npm run dev            # open the printed URL; add ?demo=1 to see sample data without a deployment
 ```
 
-Open the printed `localhost` URL. To write to the ledger (file, verify,
-dispute, update an evidence link) you'll need:
-
-1. An injected wallet (MetaMask works well) — the app will offer to add
-   / switch it to **GenLayer Studio Network** (chain id `61999`) for you.
-2. Some GEN on that same address. Studionet has no external faucet URL —
-   open [studio.genlayer.com](https://studio.genlayer.com), pick (or
-   import) the *same address* you connected here in its account selector,
-   and use the faucet (💧) button there to fund it.
-
-Reading the ledger (the list, an entry's history, stats) needs neither.
-
-## Project layout
-
-```
-src/
-  lib/
-    chain.ts      network + contract address constants
-    genlayer.ts    the genlayer-js client wrapper: reads, writes, wallet
-                    chain-switching, and turning a failed on-chain
-                    execution into a readable error message
-    types.ts       TypeScript mirror of the contract's dataclasses
-    rules.ts       client-side copies of the contract's own validation
-                    rules (title/description length, https:// checks,
-                    the verify cooldown) so a bad input never has to
-                    round-trip through a wallet signature to be caught
-    format.ts      date, address, and hash formatting helpers
-  hooks/
-    useWallet.tsx  wallet connection state (context)
-    useToast.tsx   toast notifications (context)
-    useNow.ts      a ticking clock, for live cooldown countdowns
-  components/      Header, StatusSeal, LedgerEntry, ReportCard,
-                    RegisterForm, UpdateEvidenceForm, …
-  pages/
-    LedgerPage.tsx the register: stats, "filed by you", the list itself
-    CasePage.tsx   a single promise's case file + verification history
-```
-
-## Pointing this at a different deployment
-
-The contract address is read from `VITE_CONTRACT_ADDRESS` if set, and
-otherwise falls back to the address above (see `src/lib/chain.ts`). Copy
-`.env.example` to `.env` and set it there if you deploy your own copy of
-`promise_ledger.py`.
-
-To move to a different GenLayer network (say, Bradbury or Asimov once
-you deploy there for real), edit `src/lib/chain.ts`:
-
-```ts
-// swap this import + CHAIN assignment
-import { testnetBradbury } from "genlayer-js/chains"; // was: studionet
-export const CHAIN = testnetBradbury;
-export const NETWORK_NAME = "testnetBradbury" as const;
-
-// and these two — Bradbury/Asimov use /address/, Studio uses /contracts/
-export const EXPLORER_BASE = "https://explorer-bradbury.genlayer.com";
-export const CONTRACT_EXPLORER_URL = `${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`;
-```
-`genlayer-js/chains` also exports `localnet` and `testnetAsimov`.
-
-## Build
+Deploy your own v2 contract and point the app at it:
 
 ```bash
-npm run build   # type-checks with tsc, then bundles with vite
-npm run preview # serve the production build locally
+npm run deploy                         # prints the address (uses a funded throw-away key)
+echo "VITE_CONTRACT_ADDRESS=0x..." > .env
 ```
 
-## Deploy to Cloudflare Pages
+Studionet has no external faucet: fund the wallet you connect from [studio.genlayer.com](https://studio.genlayer.com) (account selector, 💧 button).
 
-Deployment is automated by `.github/workflows/deploy.yml`: every push to
-`main` builds the app and publishes it to Cloudflare Pages via
-`cloudflare/pages-action`, so each run leaves a record — with the live
-URL and build log — under this repo's **Actions** tab. That run history
-is the repository-backed evidence that publication actually happened,
-rather than a URL only claimed outside the repo.
+## How a verdict is made
+1. Leader fetches the evidence page → whitespace-normalised, truncated snapshot.
+2. Model returns `{status, summary, citation}`; the quote must be verbatim in the snapshot.
+3. Validators re-fetch and require: same snapshot hash, the leader's quote verbatim in *their* snapshot, and the same verdict from their own model.
+4. The contract then applies deterministic rules: no quote → UNVERIFIABLE; past the deadline and not fulfilled → BROKEN; fulfilled after the deadline → *kept late*.
 
-To enable it, set these in the repo's **Settings → Secrets and variables →
-Actions**:
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · threats and limits: [docs/SECURITY.md](docs/SECURITY.md).
 
-| Name | Type | Value |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Secret | A Cloudflare token with "Cloudflare Pages — Edit" permission |
-| `CLOUDFLARE_ACCOUNT_ID` | Secret | Your Cloudflare account ID |
-| `VITE_CONTRACT_ADDRESS` | Variable (optional) | Only if pointing at your own contract deployment |
+## Contract API (v2)
+Writes: `register_promise(title, description, promisor, evidence_url, deadline_at)`, `verify_promise(id)`, `dispute_report(report_id)`, `update_evidence_url(id, url)` (submitter only, only after three failed checks).
+Reads: `get_version`, `get_limits`, `get_stats`, `get_promise`, `list_promises`, `get_report`, `get_report_snapshot`, `list_promise_reports`, `get_evidence_revisions`, `list_submitter_promises`, `get_promisor`, `list_promisors`, `list_promisor_promises`.
 
-The Cloudflare Pages project name is pinned to `promiseledger` in both
-`wrangler.toml` and the workflow, so it always deploys to the same
-project/URL instead of creating a new one each time.
+## Pages
+`/` home with 3D hero · `/ledger` · `/promise/:id` case file · `/file` · `/promisors` and `/promisors/:key` track records · `/me` · `/stats` · `/docs` · `/about`. Light/dark theme, reduced-motion and no-WebGL fallbacks.
 
-### Manual deploy (equivalent settings, if not using the Action)
+## Tests
 
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
-- **Root directory:** leave empty if this folder is the repo root; otherwise
-  point it at wherever you placed this project.
-- **Node version:** set the `NODE_VERSION` environment variable to `20` (or
-  add a `.nvmrc` with `20`) if Cloudflare's default Node is older — this
-  project needs Node 18+.
+```bash
+pip install -r requirements-dev.txt   # once; the first run downloads the GenVM SDK (~200 MB)
+npm run test:all                      # 160 frontend + 195 contract tests
+npm run mutation                      # 31 injected bugs must all be caught
+npm run e2e                           # live Studionet end-to-end + report (see docs/TESTING.md)
+```
 
-`public/_redirects` (already in this repo) tells Cloudflare Pages to serve
-`index.html` for every path, which is required because this is a
-client-side-routed single-page app (`/promise/:id` isn't a real file on
-disk) — without it, refreshing or directly opening a promise's URL would
-404.
+Open the repo in a GitHub Codespace and everything is installed for you (`.devcontainer/`). The live run writes `reports/e2e-latest.md`, ready to commit.
+
+## Project layout
+```
+contracts/promise_ledger.py   the Intelligent Contract
+src/                          app (lib, hooks, components, pages)
+tests/contract/               direct-mode contract tests (normal, adversarial, consensus, invariants)
+tests/fixtures/               shared test vectors
+e2e/                          live Studionet scripts (deploy, end-to-end) and evidence fixtures
+scripts/mutation_check.py     proves the tests catch real bugs
+docs/                         architecture, security, testing, performance, screenshots
+reports/                      generated end-to-end reports
+```
+
+## Deploying the site
+`.github/workflows/deploy.yml` builds and publishes to Cloudflare Pages on every push to `main` (secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; variable `VITE_CONTRACT_ADDRESS`). `.github/workflows/ci.yml` runs all tests; `e2e-live.yml` runs the live scenario on demand.
+
+> Studionet is a shared, hosted simulator, not a persistent testnet. State can be reset without notice.
+
+Author: [@amirhp771](https://x.com/amirhp771)
